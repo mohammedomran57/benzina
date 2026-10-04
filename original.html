@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة متابعة محطات الوقود - طرابلس | وزارة النفط والغاز</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS for Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- HTML2PDF CDN for PDF Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        :root {
+            --primary: #0f2c59;
+            --primary-light: #1e3a8a;
+            --accent: #d97706;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #0f172a;
+            --text-muted: #64748b;
+            --green: #10b981;
+            --yellow: #f59e0b;
+            --red: #ef4444;
+            --border: #e2e8f0;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            background-color: var(--bg); 
+            color: var(--text); 
+            padding-bottom: 40px; 
+            font-family: 'Tajawal', 'Inter', sans-serif;
+            transition: direction 0.2s ease;
+        }
+
+        html[dir="ltr"] body {
+            font-family: 'Inter', -apple-system, sans-serif;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white; padding: 14px 20px;
+            box-shadow: 0 4px 14px rgba(15, 44, 89, 0.18);
+            position: sticky; top: 0; z-index: 1000;
+        }
+
+        .header-container {
+            max-width: 1100px; margin: 0 auto;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .logo-area { display: flex; align-items: center; gap: 12px; }
+        .logo-icon {
+            width: 42px; height: 42px; background: var(--accent);
+            border-radius: 12px; display: flex; align-items: center;
+            justify-content: center; font-size: 22px;
+        }
+        .logo-text h1 { font-size: 1.15rem; font-weight: 800; }
+        .logo-text p { font-size: 0.75rem; opacity: 0.85; }
+
+        .header-actions {
+            display: flex; align-items: center; gap: 10px;
+        }
+
+        .lang-btn {
+            background: rgba(255, 255, 255, 0.18);
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        .lang-btn:hover { background: rgba(255, 255, 255, 0.3); }
+
+        .container { max-width: 1100px; margin: 20px auto; padding: 0 16px; }
+
+        /* Tabs Navigation */
+        .nav-tabs {
+            display: flex; gap: 8px; background: #e2e8f0;
+            padding: 4px; border-radius: 12px; margin-bottom: 16px;
+        }
+        .tab-btn {
+            flex: 1; padding: 12px; border: none; background: transparent;
+            border-radius: 8px; font-weight: 700; font-size: 0.85rem;
+            color: var(--text-muted); cursor: pointer; transition: 0.2s;
+        }
+        .tab-btn.active { background: white; color: var(--primary); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Map Container */
+        #map {
+            height: 300px; width: 100%; border-radius: 16px;
+            border: 1px solid var(--border); margin-bottom: 20px; z-index: 1;
+        }
+
+        /* Search & Filters */
+        .search-filter-bar {
+            display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; align-items: center;
+        }
+        .search-input {
+            flex: 1; min-width: 220px; padding: 10px 14px;
+            border: 1px solid var(--border); border-radius: 10px; outline: none; font-size: 0.9rem;
+        }
+        .filter-group { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+        .filter-chip {
+            padding: 8px 14px; background: white; border: 1px solid var(--border);
+            border-radius: 20px; font-size: 0.8rem; font-weight: 700; cursor: pointer; white-space: nowrap;
+        }
+        .filter-chip.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+        /* Stations Grid */
+        .stations-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;
+        }
+        .station-card {
+            background: white; border-radius: 14px; padding: 16px;
+            border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+            display: flex; flex-direction: column; justify-content: space-between;
+        }
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+        .station-title { font-size: 1.05rem; font-weight: 800; color: var(--primary); }
+        .station-sub { font-size: 0.8rem; color: var(--text-muted); }
+
+        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; }
+        .bg-green { background: #d1fae5; color: #065f46; }
+        .bg-yellow { background: #fef3c7; color: #92400e; }
+        .bg-red { background: #fee2e2; color: #991b1b; }
+
+        .wait-time-box {
+            display: flex; align-items: center; gap: 6px;
+            background: #fffbeb; border: 1px solid #fef3c7;
+            padding: 6px 10px; border-radius: 8px; font-size: 0.8rem;
+            color: #92400e; font-weight: 700; margin: 8px 0;
+        }
+
+        .reputation-badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: 0.72rem; padding: 2px 8px; border-radius: 12px;
+            background: #eff6ff; color: #1d4ed8; font-weight: 700; margin-top: 4px;
+        }
+
+        .fuel-badges { display: flex; gap: 8px; margin: 6px 0; }
+        .fuel-tag { font-size: 0.75rem; padding: 4px 10px; border-radius: 6px; background: #f1f5f9; color: var(--text-muted); }
+        .fuel-tag.active { background: #e0f2fe; color: #0369a1; font-weight: 700; }
+
+        .card-actions {
+            display: flex; gap: 8px; border-top: 1px solid #f1f5f9; padding-top: 12px; margin-top: 8px;
+        }
+        .btn {
+            padding: 8px 14px; border: none; border-radius: 8px;
+            font-size: 0.8rem; font-weight: 700; cursor: pointer; text-align: center; text-decoration: none;
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-export { background: #059669; color: white; }
+        .btn-outline { background: #f1f5f9; color: var(--text); }
+        .btn-action { background: #0369a1; color: white; padding: 6px 10px; font-size: 0.75rem; border-radius: 6px; border: none; cursor: pointer; }
+
+        /* Dashboard & Charts */
+        .dash-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .stat-card { background: white; padding: 16px; border-radius: 14px; border: 1px solid var(--border); text-align: center; }
+        .stat-val { font-size: 1.6rem; font-weight: 800; color: var(--primary); margin: 4px 0; }
+        .stat-lbl { font-size: 0.8rem; color: var(--text-muted); }
+
+        .charts-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 20px;
+        }
+        .chart-card {
+            background: white; border-radius: 16px; padding: 18px; border: 1px solid var(--border);
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03); margin-bottom: 16px;
+        }
+        .chart-container { position: relative; width: 100%; height: 230px; min-height: 230px; }
+        .chart-title { font-size: 0.9rem; font-weight: 800; color: var(--primary); margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
+
+        /* Simulator Styles */
+        .simulator-box {
+            background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 16px;
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;
+        }
+        .sim-item { display: flex; flex-direction: column; gap: 6px; }
+        .sim-item label { font-size: 0.78rem; font-weight: 700; color: var(--primary); }
+        .sim-select { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 0.8rem; background: white; outline: none; }
+
+        .alerts-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+        .alerts-table th, .alerts-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+        html[dir="rtl"] .alerts-table th, html[dir="rtl"] .alerts-table td { text-align: right; }
+        html[dir="ltr"] .alerts-table th, html[dir="ltr"] .alerts-table td { text-align: left; }
+        .alerts-table th { background: #f8fafc; color: var(--text-muted); font-weight: 700; }
+
+        /* Activity Stream */
+        .activity-stream { background: white; border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 20px; }
+        .stream-title { font-size: 0.85rem; font-weight: 800; color: var(--primary); margin-bottom: 8px; }
+        .stream-list { list-style: none; font-size: 0.8rem; color: #334155; }
+        .stream-item { padding: 6px 0; border-bottom: 1px dashed #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
+
+        /* Modal */
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center; padding: 16px;
+        }
+        .modal-content { background: white; border-radius: 16px; padding: 20px; width: 100%; max-width: 400px; position: relative; }
+        html[dir="rtl"] .close-modal { position: absolute; left: 16px; top: 16px; }
+        html[dir="ltr"] .close-modal { position: absolute; right: 16px; top: 16px; }
+        .close-modal { border: none; background: none; font-size: 1.2rem; cursor: pointer; }
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; margin-bottom: 4px; font-weight: 700; font-size: 0.85rem; }
+        .form-control { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; outline: none; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-container">
+            <div class="logo-area">
+                <div class="logo-icon">⛽</div>
+                <div class="logo-text">
+                    <h1 id="txt-app-title">منصة متابعة محطات الوقود</h1>
+                    <p id="txt-app-subtitle">غرفة العمليات والمتابعة الوزارية - طرابلس</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="lang-btn" onclick="toggleLanguage()">
+                    🌐 <span id="lang-btn-label">English</span>
+                </button>
+                <span style="font-size:0.75rem; background:rgba(255,255,255,0.15); padding:4px 10px; border-radius:20px;">V5.2 Verified</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="nav-tabs">
+            <button class="tab-btn active" id="tab-btn-map" onclick="switchTab('map-tab', this)">🗺️ الخريطة</button>
+            <button class="tab-btn" id="tab-btn-complaint" onclick="switchTab('complaint-tab', this)">📝 البلاغات</button>
+            <button class="tab-btn" id="tab-btn-dash" onclick="switchTab('dashboard-tab', this)">📊 الغرفة الوزارية</button>
+        </div>
+
+        <!-- TAB 1: Map & Stations -->
+        <div id="map-tab" class="tab-content active">
+            <div id="map"></div>
+
+            <div class="activity-stream">
+                <div class="stream-title" id="txt-stream-title">📡 التحديثات المباشرة (Crowdsourced Feed)</div>
+                <ul class="stream-list" id="activityStream"></ul>
+            </div>
+
+            <div class="search-filter-bar">
+                <input type="text" id="searchInput" class="search-input" placeholder="ابحث باسم المحطة أو المنطقة..." oninput="renderStations()">
+                <div class="filter-group">
+                    <button class="filter-chip active" id="chip-all" onclick="setFilter('all', this)">الكل</button>
+                    <button class="filter-chip" id="chip-green" onclick="setFilter('green', this)">🟢 خفيف</button>
+                    <button class="filter-chip" id="chip-yellow" onclick="setFilter('yellow', this)">🟡 متوسط</button>
+                    <button class="filter-chip" id="chip-red" onclick="setFilter('red', this)">🔴 مزدحم</button>
+                </div>
+            </div>
+
+            <div class="stations-grid" id="stationsGrid"></div>
+        </div>
+
+        <!-- TAB 2: Complaints -->
+        <div id="complaint-tab" class="tab-content">
+            <div class="chart-card" style="max-width: 500px; margin: 0 auto;">
+                <h3 id="txt-complaint-title" style="margin-bottom:8px; color:var(--primary);">تقديم بلاغ / شكوى رسمية</h3>
+                <p id="txt-complaint-desc" style="font-size:0.8rem; color:var(--text-muted); margin-bottom:16px;">تصل الشكوى فوراً لغرفة عمليات الوزارة.</p>
+                <form onsubmit="submitComplaint(event)">
+                    <div class="form-group">
+                        <label id="lbl-complaint-station">المحطة المعنية</label>
+                        <select class="form-control" id="complaintStation" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label id="lbl-complaint-type">نوع التجاوز</label>
+                        <select class="form-control" id="complaintType" required>
+                            <option value="opt1">إغلاق المحطة رغم توفر الوقود</option>
+                            <option value="opt2">امتناع عن البيع / محاولة تهريب</option>
+                            <option value="opt3">سوء تنظيم أو فوضى مرورية</option>
+                            <option value="opt4">أخرى</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label id="lbl-complaint-details">تفاصيل الشكوى</label>
+                        <textarea class="form-control" id="complaintDetails" rows="3" placeholder="اكتب تفاصيل الموقف..." required></textarea>
+                    </div>
+                    <button type="submit" id="btn-submit-complaint" class="btn btn-primary" style="width:100%; padding:12px;">إرسال الشكوى</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- TAB 3: Ministry Dashboard -->
+        <div id="dashboard-tab" class="tab-content">
+            <div id="pdfPrintArea">
+                <div class="dash-header">
+                    <div>
+                        <h3 id="txt-dash-title" style="color:var(--primary);">📊 لوحة المتابعة والتنبؤ الاستراتيجي</h3>
+                        <p id="txt-dash-subtitle" style="font-size:0.8rem; color:var(--text-muted);">نظام التنبؤ المبكر بأزمات الوقود للشهر القادم (نطاق طرابلس)</p>
+                    </div>
+                    <button class="btn btn-export" id="btn-export-pdf" onclick="exportExecutivePDF()">📄 تصدير التقرير (PDF)</button>
+                </div>
+                
+                <!-- KPI Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-lbl" id="kpi-lbl-stations">المحطات النشطة</div>
+                        <div class="stat-val" id="dashTotal">6</div>
+                        <span id="kpi-sub-stations" style="font-size:0.7rem; color:var(--green);">نطاق طرابلس</span>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-lbl" id="kpi-lbl-efficiency">نسبة الانسيابية الحالية</div>
+                        <div class="stat-val" style="color:var(--green);" id="dashEfficiency">66%</div>
+                        <span id="kpi-sub-efficiency" style="font-size:0.7rem; color:var(--green);">وضع طبيعي</span>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-lbl" id="kpi-lbl-risk">مؤشر مخاطر الشهر القادم</div>
+                        <div class="stat-val" style="color:var(--accent);" id="dashRiskIndex">متوسط (42%)</div>
+                        <span id="kpi-sub-risk" style="font-size:0.7rem; color:var(--primary);">تحت السيطرة</span>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-lbl" id="kpi-lbl-reputation">موثوقية البلاغات الميدانية</div>
+                        <div class="stat-val" style="color:var(--primary);">92%</div>
+                        <span id="kpi-sub-reputation" style="font-size:0.7rem; color:var(--green);">خوارزمية معتمدة</span>
+                    </div>
+                </div>
+
+                <!-- 30-Day Strategic Forecast Section -->
+                <div class="chart-card">
+                    <div class="chart-title" id="txt-forecast-title">🔮 نموذج التنبؤ الاستباقي ومعدل الخطر خلال الـ 30 يوماً القادمة</div>
+                    
+                    <!-- Dynamic Scenario Simulator -->
+                    <div class="simulator-box">
+                        <div class="sim-item">
+                            <label id="lbl-sim-supply">🚢 حركة النواقل وتفريغ الوقود:</label>
+                            <select class="sim-select" id="simSupply" onchange="recalculateMonthlyForecast()">
+                                <option value="normal">وصول منتظم دون تأخير</option>
+                                <option value="delay">تأخر ناقلة بميناء طرابلس (3 أيام)</option>
+                                <option value="boost">تفريغ شحنتين متتاليتين (فائض)</option>
+                            </select>
+                        </div>
+                        <div class="sim-item">
+                            <label id="lbl-sim-power">⚡ ساعات طرح الأحمال المتوقعة:</label>
+                            <select class="sim-select" id="simPower" onchange="recalculateMonthlyForecast()">
+                                <option value="low">طبيعي (0 - 2 ساعات)</option>
+                                <option value="high">مرتفع (5 - 8 ساعات / تشغيل المولدات)</option>
+                            </select>
+                        </div>
+                        <div class="sim-item">
+                            <label id="lbl-sim-salary">💵 مواعيد المرتبات والمواسم:</label>
+                            <select class="sim-select" id="simSalary" onchange="recalculateMonthlyForecast()">
+                                <option value="normal">أيام عمل اعتيادية</option>
+                                <option value="payday">أسبوع صرف المرتبات والسيولة</option>
+                                <option value="holiday">عطلة موسمية / سفر الأعياد</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="chart-container" style="height: 250px;">
+                        <canvas id="monthlyForecastChart"></canvas>
+                        <img id="monthlyForecastChartImg" class="pdf-img" style="display:none;" />
+                    </div>
+                </div>
+
+                <!-- Charts Section: Real-time Snapshot -->
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <div class="chart-title" id="txt-chart-status-title">🍩 حالة الازدحام الميداني اللحظي</div>
+                        <div class="chart-container">
+                            <canvas id="statusChart"></canvas>
+                            <img id="statusChartImg" class="pdf-img" style="display:none;" />
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-title" id="txt-chart-district-title">📊 كثافة البلاغات الحالية حسب البلديات</div>
+                        <div class="chart-container">
+                            <canvas id="districtChart"></canvas>
+                            <img id="districtChartImg" class="pdf-img" style="display:none;" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Operational Decision Table -->
+                <div class="chart-card" style="overflow-x:auto;">
+                    <div class="chart-title" id="txt-alerts-title">⚠️ المحطات ذات الأولوية العالية لغرفة المتابعة والإجراء الفوري</div>
+                    <table class="alerts-table">
+                        <thead>
+                            <tr>
+                                <th id="th-st-name">المحطة</th>
+                                <th id="th-st-area">البلدية</th>
+                                <th id="th-st-status">الحالة</th>
+                                <th id="th-st-wait">الانتظار</th>
+                                <th id="th-st-rep">الموثوقية</th>
+                                <th id="th-st-action">الإجراء الموصى به</th>
+                            </tr>
+                        </thead>
+                        <tbody id="alertsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Report Modal -->
+    <div class="modal" id="reportModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()">✕</button>
+            <h3 id="modalStationTitle" style="color:var(--primary); margin-bottom:12px;">تحديث حالة المحطة</h3>
+            <form onsubmit="submitQuickReport(event)">
+                <input type="hidden" id="modalStationId">
+                <div class="form-group">
+                    <label id="lbl-modal-status">حالة الازدحام الحالية</label>
+                    <select class="form-control" id="modalStatusSelect" onchange="autoSyncWaitTime()">
+                        <option value="green">🟢 خفيف / لا يوجد انتظار</option>
+                        <option value="yellow">🟡 متوسط</option>
+                        <option value="red">🔴 ازدحام شديد / نافد</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label id="lbl-modal-wait">الوقت التقديري للانتظار</label>
+                    <select class="form-control" id="modalWaitTimeSelect"></select>
+                </div>
+                <div class="form-group">
+                    <label id="lbl-modal-fuel">أنواع الوقود المتوفرة</label>
+                    <label style="display:block; margin-top:4px;"><input type="checkbox" id="modalGas95" checked> <span id="lbl-gas95">بنزين 95</span></label>
+                    <label style="display:block; margin-top:4px;"><input type="checkbox" id="modalDiesel"> <span id="lbl-diesel">ديزل</span></label>
+                </div>
+                <div class="form-group">
+                    <label id="lbl-modal-rep">تقييم موثوقية المُبلغ</label>
+                    <select class="form-control" id="modalReputationSelect"></select>
+                </div>
+                <button type="submit" id="btn-modal-submit" class="btn btn-primary" style="width:100%; padding:10px;">تأكيد ونشر التحديث</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const i18n = {
+            ar: {
+                langBtn: "English",
+                appTitle: "منصة متابعة محطات الوقود",
+                appSubtitle: "غرفة العمليات والمتابعة الوزارية - طرابلس",
+                tabMap: "🗺️ الخريطة",
+                tabComplaint: "📝 البلاغات",
+                tabDash: "📊 الغرفة الوزارية",
+                streamTitle: "📡 التحديثات المباشرة (Crowdsourced Feed)",
+                searchPlaceholder: "ابحث باسم المحطة أو المنطقة...",
+                filterAll: "الكل",
+                filterGreen: "🟢 خفيف",
+                filterYellow: "🟡 متوسط",
+                filterRed: "🔴 مزدحم",
+                estWait: "⏳ الانتظار التقديري:",
+                gas95: "بنزين 95",
+                diesel: "ديزل",
+                updatedLabel: "🕒 التحديث:",
+                btnUpdate: "تحديث",
+                btnMap: "🗺️ خريطة",
+                repBadge: "موثوقية:",
+                complaintTitle: "تقديم بلاغ / شكوى رسمية",
+                complaintDesc: "تصل الشكوى فوراً لغرفة عمليات الوزارة.",
+                complaintStation: "المحطة المعنية",
+                complaintType: "نوع التجاوز",
+                complaintDetails: "تفاصيل الشكوى",
+                complaintDetailsPh: "اكتب تفاصيل الموقف...",
+                btnSubmitComplaint: "إرسال الشكوى",
+                complaintOptions: [
+                    "إغلاق المحطة رغم توفر الوقود",
+                    "امتناع عن البيع / محاولة تهريب",
+                    "سوء تنظيم أو فوضى مرورية",
+                    "أخرى"
+                ],
+                dashTitle: "📊 لوحة المتابعة والتنبؤ الاستراتيجي",
+                dashSubtitle: "نظام التنبؤ المبكر بأزمات الوقود للشهر القادم (نطاق طرابلس)",
+                btnExportPdf: "📄 تصدير التقرير (PDF)",
+                kpiActiveStations: "المحطات النشطة",
+                kpiScope: "نطاق طرابلس",
+                kpiFlowRate: "نسبة الانسيابية الحالية",
+                kpiNormal: "وضع طبيعي",
+                kpiRiskIndex: "مؤشر مخاطر الشهر القادم",
+                kpiControlled: "تحت السيطرة",
+                kpiReputation: "موثوقية البلاغات الميدانية",
+                kpiVerified: "خوارزمية معتمدة",
+                forecastTitle: "🔮 نموذج التنبؤ الاستباقي ومعدل الخطر خلال الـ 30 يوماً القادمة",
+                simSupply: "🚢 حركة النواقل وتفريغ الوقود:",
+                simPower: "⚡ ساعات طرح الأحمال المتوقعة:",
+                simSalary: "💵 مواعيد المرتبات والمواسم:",
+                supplyOpts: [
+                    "وصول منتظم دون تأخير",
+                    "تأخر ناقلة بميناء طرابلس (3 أيام)",
+                    "تفريغ شحنتين متتاليتين (فائض)"
+                ],
+                powerOpts: [
+                    "طبيعي (0 - 2 ساعات)",
+                    "مرتفع (5 - 8 ساعات / تشغيل المولدات)"
+                ],
+                salaryOpts: [
+                    "أيام عمل اعتيادية",
+                    "أسبوع صرف المرتبات والسيولة",
+                    "عطلة موسمية / سفر الأعياد"
+                ],
+                chartStatusTitle: "🍩 حالة الازدحام الميداني اللحظي",
+                chartDistrictTitle: "📊 كثافة البلاغات الحالية حسب البلديات",
+                alertsTitle: "⚠️ المحطات ذات الأولوية العالية لغرفة المتابعة والإجراء الفوري",
+                thStation: "المحطة",
+                thDistrict: "البلدية",
+                thStatus: "الحالة",
+                thWait: "الانتظار",
+                thRep: "الموثوقية",
+                thAction: "الإجراء الموصى به",
+                actionTanker: "توجيه شاحنة",
+                actionInspector: "مفتش ميداني",
+                actionAlertTanker: "تم توجيه شاحنة تعزيز إضافية فوراً.",
+                actionAlertInspector: "تم إرسال مفتش من وزارة النفط للتحقق.",
+                modalUpdateTitle: "تحديث حالة: ",
+                modalStatusLabel: "حالة الازدحام الحالية",
+                modalWaitLabel: "الوقت التقديري للانتظار",
+                modalFuelLabel: "أنواع الوقود المتوفرة",
+                modalRepLabel: "تقييم موثوقية المُبلغ",
+                modalBtnSubmit: "تأكيد ونشر التحديث",
+                modalStatusOpts: [
+                    "🟢 خفيف / لا يوجد انتظار",
+                    "🟡 متوسط",
+                    "🔴 ازدحام شديد / نافد"
+                ],
+                modalWaitOpts: [
+                    { val: "أقل من 10 دقائق", label: "أقل من 10 دقائق (سلس جداً)" },
+                    { val: "15 - 30 دقيقة", label: "15 - 30 دقيقة (متوسط)" },
+                    { val: "45 - 60 دقيقة", label: "45 - 60 دقيقة (طويل)" },
+                    { val: "ساعة فأكثر", label: "ساعة فأكثر (ازدحام شديد)" },
+                    { val: "غير متاح (مغلقة)", label: "غير متاح / المحطة متوقفة" }
+                ],
+                modalRepOpts: [
+                    { val: 98, label: "🌟 متطوع معتمد / مفتش (98%)" },
+                    { val: 90, label: "🛡️ مواطن موثوق (90%)" },
+                    { val: 75, label: "👤 مستخدم جديد (75%)" }
+                ],
+                statusGreen: "🟢 خفيف",
+                statusYellow: "🟡 متوسط",
+                statusRed: "🔴 مزدحم جداً",
+                chartForecastLegend: "مؤشر الازدحام التنبؤي (%)",
+                chartThresholdLegend: "عتبة الخطر الحرجة (75%)",
+                chartDistrictDataset: "عدد البلاغات",
+                riskVeryHigh: "مرتفع جداً",
+                riskModerate: "متوسط",
+                riskStable: "منخفض مستقر",
+                complaintSent: "تم استلام الشكوى وتوجيهها لغرفة العمليات بنجاح.",
+                districts: ['طرابلس المركز', 'حي الأندلس', 'سوق الجمعة', 'عين زارة', 'جنزور', 'السواني']
+            },
+            en: {
+                langBtn: "العربية",
+                appTitle: "Fuel Station Tracking Platform",
+                appSubtitle: "Ministry Operations & Decision Room - Tripoli",
+                tabMap: "🗺️ Map",
+                tabComplaint: "📝 Reports",
+                tabDash: "📊 Ministry Room",
+                streamTitle: "📡 Live Crowdsourced Feed",
+                searchPlaceholder: "Search by station name or municipality...",
+                filterAll: "All",
+                filterGreen: "🟢 Low",
+                filterYellow: "🟡 Moderate",
+                filterRed: "🔴 Congested",
+                estWait: "⏳ Estimated Wait:",
+                gas95: "Gasoline 95",
+                diesel: "Diesel",
+                updatedLabel: "🕒 Updated:",
+                btnUpdate: "Update",
+                btnMap: "🗺️ Map",
+                repBadge: "Reliability:",
+                complaintTitle: "Submit Official Report / Complaint",
+                complaintDesc: "Directly routed to the Ministry Operations Command Room.",
+                complaintStation: "Target Station",
+                complaintType: "Violation Type",
+                complaintDetails: "Complaint Details",
+                complaintDetailsPh: "Provide incident details...",
+                btnSubmitComplaint: "Send Complaint",
+                complaintOptions: [
+                    "Closed station despite fuel availability",
+                    "Refusal to dispense / Smuggling suspicion",
+                    "Traffic congestion & poor queue management",
+                    "Other"
+                ],
+                dashTitle: "📊 Strategic Monitoring & Forecast Room",
+                dashSubtitle: "Tripoli Strategic Fuel Crisis Early Warning System (30-Day Outlook)",
+                btnExportPdf: "📄 Export Report (PDF)",
+                kpiActiveStations: "Active Stations",
+                kpiScope: "Tripoli Region",
+                kpiFlowRate: "Current Flow Rate",
+                kpiNormal: "Normal State",
+                kpiRiskIndex: "Next Month Risk Index",
+                kpiControlled: "Under Control",
+                kpiReputation: "Field Reports Reliability",
+                kpiVerified: "Consensus Algorithm",
+                forecastTitle: "🔮 Proactive 30-Day Crisis Forecast & Risk Modeling",
+                simSupply: "🚢 Tanker Deliveries & Offloading:",
+                simPower: "⚡ Projected Load Shedding Hours:",
+                simSalary: "💵 Salary Disbursals & Seasons:",
+                supplyOpts: [
+                    "Regular arrival without delay",
+                    "Tripoli Port tanker delay (3 days)",
+                    "Double tanker offloading (Surplus)"
+                ],
+                powerOpts: [
+                    "Normal (0 - 2 hours)",
+                    "High (5 - 8 hours / Generator surge)"
+                ],
+                salaryOpts: [
+                    "Standard working days",
+                    "Salary disbursement week (Demand peak)",
+                    "Seasonal holiday / High transit"
+                ],
+                chartStatusTitle: "🍩 Live Field Queue Status",
+                chartDistrictTitle: "📊 Report Density by Municipality",
+                alertsTitle: "⚠️ High-Priority Stations for Immediate Ministry Action",
+                thStation: "Station",
+                thDistrict: "Municipality",
+                thStatus: "Status",
+                thWait: "Wait Time",
+                thRep: "Reliability",
+                thAction: "Recommended Action",
+                actionTanker: "Dispatch Tanker",
+                actionInspector: "Send Inspector",
+                actionAlertTanker: "Emergency tanker dispatched immediately.",
+                actionAlertInspector: "Ministry field inspector dispatched for on-site verification.",
+                modalUpdateTitle: "Update Status: ",
+                modalStatusLabel: "Current Congestion Level",
+                modalWaitLabel: "Estimated Wait Time",
+                modalFuelLabel: "Available Fuels",
+                modalRepLabel: "Reporter Trust Rating",
+                modalBtnSubmit: "Confirm & Broadcast Update",
+                modalStatusOpts: [
+                    "🟢 Smooth / No wait",
+                    "🟡 Moderate queue",
+                    "🔴 Severely congested / Depleted"
+                ],
+                modalWaitOpts: [
+                    { val: "أقل من 10 دقائق", label: "Under 10 mins (Smooth)" },
+                    { val: "15 - 30 دقيقة", label: "15 - 30 mins (Moderate)" },
+                    { val: "45 - 60 دقيقة", label: "45 - 60 mins (Long)" },
+                    { val: "ساعة فأكثر", label: "1+ hour (Severe)" },
+                    { val: "غير متاح (مغلقة)", label: "Unavailable / Closed" }
+                ],
+                modalRepOpts: [
+                    { val: 98, label: "🌟 Certified Volunteer / Inspector (98%)" },
+                    { val: 90, label: "🛡️ Trusted Citizen (90%)" },
+                    { val: 75, label: "👤 New Contributor (75%)" }
+                ],
+                statusGreen: "🟢 Low",
+                statusYellow: "🟡 Moderate",
+                statusRed: "🔴 Congested",
+                chartForecastLegend: "Projected Congestion Index (%)",
+                chartThresholdLegend: "Critical Threshold (75%)",
+                chartDistrictDataset: "Report Count",
+                riskVeryHigh: "Very High",
+                riskModerate: "Moderate",
+                riskStable: "Low / Stable",
+                complaintSent: "Complaint registered and routed to Ministry command successfully.",
+                districts: ['Tripoli Center', 'Hay Al-Andalus', 'Souq Al-Jumaa', 'Ain Zara', 'Janzour', 'Al-Swani']
+            }
+        };
+
+        let currentLang = 'ar';
+
+        let stations = [
+            { id: 1, name_ar: 'محطة طريق الشط', name_en: 'Shatt Road Station', company_ar: 'شركة السهم - 121', company_en: 'Al-Sahm Co. - 121', area_ar: 'طرابلس المركز', area_en: 'Tripoli Center', lat: 32.8980, lng: 13.1980, status: 'green', waitTime: 'أقل من 10 دقائق', gas95: true, diesel: true, updated_ar: 'منذ 5 دقائق', updated_en: '5m ago', reputation: 96 },
+            { id: 2, name_ar: 'محطة حي الأندلس', name_en: 'Hay Al-Andalus Station', company_ar: 'شركة الراحلة - 84', company_en: 'Al-Rahila Co. - 84', area_ar: 'حي الأندلس', area_en: 'Hay Al-Andalus', lat: 32.8850, lng: 13.1450, status: 'yellow', waitTime: '20 - 30 دقيقة', gas95: true, diesel: false, updated_ar: 'منذ 12 دقيقة', updated_en: '12m ago', reputation: 91 },
+            { id: 3, name_ar: 'محطة سوق الجمعة', name_en: 'Souq Al-Jumaa Station', company_ar: 'شركة الشرارة - 45', company_en: 'Al-Sharara Co. - 45', area_ar: 'سوق الجمعة', area_en: 'Souq Al-Jumaa', lat: 32.8910, lng: 13.2350, status: 'red', waitTime: 'ساعة فأكثر', gas95: true, diesel: true, updated_ar: 'منذ 3 دقائق', updated_en: '3m ago', reputation: 94 },
+            { id: 4, name_ar: 'محطة عين زارة', name_en: 'Ain Zara Station', company_ar: 'شركة الطرق السريعة - 202', company_en: 'Highways Co. - 202', area_ar: 'عين زارة', area_en: 'Ain Zara', lat: 32.8350, lng: 13.2450, status: 'green', waitTime: '10 - 15 دقيقة', gas95: true, diesel: false, updated_ar: 'منذ 18 دقيقة', updated_en: '18m ago', reputation: 88 },
+            { id: 5, name_ar: 'محطة جنزور المركز', name_en: 'Janzour Center Station', company_ar: 'شركة الراحلة - 110', company_en: 'Al-Rahila Co. - 110', area_ar: 'جنزور', area_en: 'Janzour', lat: 32.8250, lng: 13.0800, status: 'red', waitTime: 'غير متاح (مغلقة)', gas95: false, diesel: false, updated_ar: 'منذ 35 دقيقة', updated_en: '35m ago', reputation: 89 },
+            { id: 6, name_ar: 'محطة السواني', name_en: 'Al-Swani Station', company_ar: 'شركة الشرارة - 88', company_en: 'Al-Sharara Co. - 88', area_ar: 'السواني', area_en: 'Al-Swani', lat: 32.7900, lng: 13.1200, status: 'green', waitTime: 'أقل من 10 دقائق', gas95: true, diesel: true, updated_ar: 'منذ 10 دقائق', updated_en: '10m ago', reputation: 95 }
+        ];
+
+        let activeFilter = 'all';
+        let map, markersGroup;
+        let statusChartInstance, districtChartInstance, monthlyChartInstance;
+
+        function toggleLanguage() {
+            currentLang = currentLang === 'ar' ? 'en' : 'ar';
+            document.documentElement.lang = currentLang;
+            document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+
+            applyTranslations();
+            renderStations();
+            populateComplaintDropdown();
+            renderAlertsTable();
+            updateChartLocale();
+            recalculateMonthlyForecast();
+        }
+
+        function applyTranslations() {
+            const t = i18n[currentLang];
+            document.getElementById('lang-btn-label').innerText = t.langBtn;
+            document.getElementById('txt-app-title').innerText = t.appTitle;
+            document.getElementById('txt-app-subtitle').innerText = t.appSubtitle;
+            document.getElementById('tab-btn-map').innerText = t.tabMap;
+            document.getElementById('tab-btn-complaint').innerText = t.tabComplaint;
+            document.getElementById('tab-btn-dash').innerText = t.tabDash;
+            document.getElementById('txt-stream-title').innerText = t.streamTitle;
+            document.getElementById('searchInput').placeholder = t.searchPlaceholder;
+            
+            document.getElementById('chip-all').innerText = t.filterAll;
+            document.getElementById('chip-green').innerText = t.filterGreen;
+            document.getElementById('chip-yellow').innerText = t.filterYellow;
+            document.getElementById('chip-red').innerText = t.filterRed;
+
+            document.getElementById('txt-complaint-title').innerText = t.complaintTitle;
+            document.getElementById('txt-complaint-desc').innerText = t.complaintDesc;
+            document.getElementById('lbl-complaint-station').innerText = t.complaintStation;
+            document.getElementById('lbl-complaint-type').innerText = t.complaintType;
+            document.getElementById('lbl-complaint-details').innerText = t.complaintDetails;
+            document.getElementById('complaintDetails').placeholder = t.complaintDetailsPh;
+            document.getElementById('btn-submit-complaint').innerText = t.btnSubmitComplaint;
+
+            const cTypeSelect = document.getElementById('complaintType');
+            Array.from(cTypeSelect.options).forEach((opt, idx) => {
+                opt.text = t.complaintOptions[idx];
+            });
+
+            document.getElementById('txt-dash-title').innerText = t.dashTitle;
+            document.getElementById('txt-dash-subtitle').innerText = t.dashSubtitle;
+            document.getElementById('btn-export-pdf').innerText = t.btnExportPdf;
+
+            document.getElementById('kpi-lbl-stations').innerText = t.kpiActiveStations;
+            document.getElementById('kpi-sub-stations').innerText = t.kpiScope;
+            document.getElementById('kpi-lbl-efficiency').innerText = t.kpiFlowRate;
+            document.getElementById('kpi-sub-efficiency').innerText = t.kpiNormal;
+            document.getElementById('kpi-lbl-risk').innerText = t.kpiRiskIndex;
+            document.getElementById('kpi-sub-risk').innerText = t.kpiControlled;
+            document.getElementById('kpi-lbl-reputation').innerText = t.kpiReputation;
+            document.getElementById('kpi-sub-reputation').innerText = t.kpiVerified;
+
+            document.getElementById('txt-forecast-title').innerText = t.forecastTitle;
+            document.getElementById('lbl-sim-supply').innerText = t.simSupply;
+            document.getElementById('lbl-sim-power').innerText = t.simPower;
+            document.getElementById('lbl-sim-salary').innerText = t.simSalary;
+
+            const simSupplySel = document.getElementById('simSupply');
+            Array.from(simSupplySel.options).forEach((opt, idx) => { opt.text = t.supplyOpts[idx]; });
+            const simPowerSel = document.getElementById('simPower');
+            Array.from(simPowerSel.options).forEach((opt, idx) => { opt.text = t.powerOpts[idx]; });
+            const simSalarySel = document.getElementById('simSalary');
+            Array.from(simSalarySel.options).forEach((opt, idx) => { opt.text = t.salaryOpts[idx]; });
+
+            document.getElementById('txt-chart-status-title').innerText = t.chartStatusTitle;
+            document.getElementById('txt-chart-district-title').innerText = t.chartDistrictTitle;
+            document.getElementById('txt-alerts-title').innerText = t.alertsTitle;
+
+            document.getElementById('th-st-name').innerText = t.thStation;
+            document.getElementById('th-st-area').innerText = t.thDistrict;
+            document.getElementById('th-st-status').innerText = t.thStatus;
+            document.getElementById('th-st-wait').innerText = t.thWait;
+            document.getElementById('th-st-rep').innerText = t.thRep;
+            document.getElementById('th-st-action').innerText = t.thAction;
+
+            document.getElementById('lbl-modal-status').innerText = t.modalStatusLabel;
+            document.getElementById('lbl-modal-wait').innerText = t.modalWaitLabel;
+            document.getElementById('lbl-modal-fuel').innerText = t.modalFuelLabel;
+            document.getElementById('lbl-gas95').innerText = t.gas95;
+            document.getElementById('lbl-diesel').innerText = t.diesel;
+            document.getElementById('lbl-modal-rep').innerText = t.modalRepLabel;
+            document.getElementById('btn-modal-submit').innerText = t.modalBtnSubmit;
+
+            const mStatusSelect = document.getElementById('modalStatusSelect');
+            Array.from(mStatusSelect.options).forEach((opt, idx) => { opt.text = t.modalStatusOpts[idx]; });
+
+            populateModalDropdowns();
+            renderActivityStream();
+        }
+
+        function populateModalDropdowns() {
+            const t = i18n[currentLang];
+            const waitSelect = document.getElementById('modalWaitTimeSelect');
+            const prevWait = waitSelect.value;
+            waitSelect.innerHTML = '';
+            t.modalWaitOpts.forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item.val;
+                opt.innerText = item.label;
+                waitSelect.appendChild(opt);
+            });
+            if (prevWait) waitSelect.value = prevWait;
+
+            const repSelect = document.getElementById('modalReputationSelect');
+            const prevRep = repSelect.value;
+            repSelect.innerHTML = '';
+            t.modalRepOpts.forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item.val;
+                opt.innerText = item.label;
+                repSelect.appendChild(opt);
+            });
+            if (prevRep) repSelect.value = prevRep;
+        }
+
+        function renderActivityStream() {
+            const stream = document.getElementById('activityStream');
+            if (currentLang === 'ar') {
+                stream.innerHTML = `
+                    <li class="stream-item">
+                        <span>تحديث مواطن: <strong>محطة طريق الشط</strong> - انتظار أقل من 10 دقائق</span>
+                        <span class="reputation-badge">🛡️ 96%</span>
+                    </li>
+                    <li class="stream-item">
+                        <span>تحديث مواطن: <strong>محطة سوق الجمعة</strong> - انتظار أكثر من ساعة</span>
+                        <span class="reputation-badge">🛡️ 94%</span>
+                    </li>
+                `;
+            } else {
+                stream.innerHTML = `
+                    <li class="stream-item">
+                        <span>Citizen Update: <strong>Shatt Road Station</strong> - Wait time under 10 mins</span>
+                        <span class="reputation-badge">🛡️ 96%</span>
+                    </li>
+                    <li class="stream-item">
+                        <span>Citizen Update: <strong>Souq Al-Jumaa Station</strong> - Wait time over 1 hour</span>
+                        <span class="reputation-badge">🛡️ 94%</span>
+                    </li>
+                `;
+            }
+        }
+
+        function renderAlertsTable() {
+            const t = i18n[currentLang];
+            const tbody = document.getElementById('alertsTableBody');
+            tbody.innerHTML = `
+                <tr>
+                    <td><strong>${currentLang === 'ar' ? 'سوق الجمعة' : 'Souq Al-Jumaa'}</strong></td>
+                    <td>${currentLang === 'ar' ? 'سوق الجمعة' : 'Souq Al-Jumaa'}</td>
+                    <td><span class="status-badge bg-red">${t.statusRed}</span></td>
+                    <td>${currentLang === 'ar' ? 'ساعة فأكثر' : '1+ hour'}</td>
+                    <td><span class="reputation-badge">🛡️ 94%</span></td>
+                    <td><button class="btn-action" onclick="alert('${t.actionAlertTanker}')">${t.actionTanker}</button></td>
+                </tr>
+                <tr>
+                    <td><strong>${currentLang === 'ar' ? 'جنزور المركز' : 'Janzour Center'}</strong></td>
+                    <td>${currentLang === 'ar' ? 'جنزور' : 'Janzour'}</td>
+                    <td><span class="status-badge bg-red">${t.statusRed}</span></td>
+                    <td>${currentLang === 'ar' ? 'غير متاح' : 'Unavailable'}</td>
+                    <td><span class="reputation-badge">🛡️ 89%</span></td>
+                    <td><button class="btn-action" onclick="alert('${t.actionAlertInspector}')">${t.actionInspector}</button></td>
+                </tr>
+            `;
+        }
+
+        function initMap() {
+            map = L.map('map').setView([32.8600, 13.1800], 11);
+            
+            // Professional Esri World Street Map (No API Key Required & 100% Reliable)
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN',
+                maxZoom: 19
+            }).addTo(map);
+
+            markersGroup = L.layerGroup().addTo(map);
+            renderMapPins();
+        }
+        function renderMapPins() {
+            markersGroup.clearLayers();
+            const filtered = getFilteredStations();
+            const t = i18n[currentLang];
+
+            filtered.forEach(st => {
+                const colorMap = { green: '#10b981', yellow: '#f59e0b', red: '#ef4444' };
+                const markerHtml = `<div style="background-color:${colorMap[st.status]}; width:22px; height:22px; border-radius:50%; border:2px solid white; box-shadow:0 2px 5px rgba(0,0,0,0.3);"></div>`;
+                
+                const customIcon = L.divIcon({
+                    html: markerHtml, className: 'custom-pin', iconSize: [22, 22]
+                });
+
+                const name = currentLang === 'ar' ? st.name_ar : st.name_en;
+                const company = currentLang === 'ar' ? st.company_ar : st.company_en;
+
+                const marker = L.marker([st.lat, st.lng], { icon: customIcon }).addTo(markersGroup);
+                marker.bindPopup(`
+                    <div style="direction:${currentLang === 'ar' ? 'rtl' : 'ltr'}; text-align:${currentLang === 'ar' ? 'right' : 'left'};">
+                        <strong>${name}</strong><br>
+                        ${company}<br>
+                        ${t.thStatus}: ${getStatusLabel(st.status)}<br>
+                        ⏳ ${t.thWait}: <strong>${getWaitTimeLabel(st.waitTime)}</strong><br>
+                        🛡️ ${t.repBadge}: ${st.reputation}%
+                    </div>
+                `);
+            });
+        }
+
+        function getStatusLabel(status) {
+            const t = i18n[currentLang];
+            if (status === 'green') return t.statusGreen;
+            if (status === 'yellow') return t.statusYellow;
+            return t.statusRed;
+        }
+
+        function getWaitTimeLabel(val) {
+            if (currentLang === 'ar') return val;
+            if (val.includes('10')) return 'Under 10 mins';
+            if (val.includes('30')) return '15 - 30 mins';
+            if (val.includes('60') || val.includes('ساعة')) return '1+ hour';
+            return 'Unavailable';
+        }
+
+        function getFilteredStations() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            return stations.filter(st => {
+                const name = (currentLang === 'ar' ? st.name_ar : st.name_en).toLowerCase();
+                const area = (currentLang === 'ar' ? st.area_ar : st.area_en).toLowerCase();
+                const company = (currentLang === 'ar' ? st.company_ar : st.company_en).toLowerCase();
+                
+                const matchesSearch = name.includes(query) || area.includes(query) || company.includes(query);
+                const matchesFilter = activeFilter === 'all' || st.status === activeFilter;
+                return matchesSearch && matchesFilter;
+            });
+        }
+
+        function renderStations() {
+            const grid = document.getElementById('stationsGrid');
+            grid.innerHTML = '';
+            const filtered = getFilteredStations();
+            const t = i18n[currentLang];
+
+            filtered.forEach(st => {
+                const badgeClass = st.status === 'green' ? 'bg-green' : st.status === 'yellow' ? 'bg-yellow' : 'bg-red';
+                const name = currentLang === 'ar' ? st.name_ar : st.name_en;
+                const company = currentLang === 'ar' ? st.company_ar : st.company_en;
+                const area = currentLang === 'ar' ? st.area_ar : st.area_en;
+                const updated = currentLang === 'ar' ? st.updated_ar : st.updated_en;
+
+                const card = document.createElement('div');
+                card.className = 'station-card';
+                card.innerHTML = `
+                    <div>
+                        <div class="card-header">
+                            <div>
+                                <div class="station-title">${name}</div>
+                                <div class="station-sub">${company} • ${area}</div>
+                                <div class="reputation-badge">🛡️ ${t.repBadge} ${st.reputation}%</div>
+                            </div>
+                            <span class="status-badge ${badgeClass}">${getStatusLabel(st.status)}</span>
+                        </div>
+
+                        <div class="wait-time-box">
+                            <span>${t.estWait}</span>
+                            <span style="color:#b45309;">${getWaitTimeLabel(st.waitTime)}</span>
+                        </div>
+
+                        <div class="fuel-badges">
+                            <span class="fuel-tag ${st.gas95 ? 'active' : ''}">${t.gas95} ${st.gas95 ? '✔️' : '✖️'}</span>
+                            <span class="fuel-tag ${st.diesel ? 'active' : ''}">${t.diesel} ${st.diesel ? '✔️' : '✖️'}</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:8px;">${t.updatedLabel} ${updated}</div>
+                        <div class="card-actions">
+                            <button class="btn btn-primary" onclick="openReportModal(${st.id})">${t.btnUpdate}</button>
+                            <a href="https://www.google.com/maps?q=${st.lat},${st.lng}" target="_blank" class="btn btn-outline">${t.btnMap}</a>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+
+            renderMapPins();
+            updateDashboardCharts();
+        }
+
+        function setFilter(type, el) {
+            document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+            activeFilter = type;
+            renderStations();
+        }
+
+        function switchTab(tabId, btn) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+            document.getElementById(tabId).classList.add('active');
+            if (btn) btn.classList.add('active');
+
+            if (tabId === 'map-tab') {
+                setTimeout(() => map.invalidateSize(), 200);
+            }
+
+            if (tabId === 'dashboard-tab') {
+                setTimeout(() => {
+                    if (statusChartInstance) statusChartInstance.resize();
+                    if (districtChartInstance) districtChartInstance.resize();
+                    if (monthlyChartInstance) monthlyChartInstance.resize();
+                }, 150);
+            }
+        }
+
+        function autoSyncWaitTime() {
+            const status = document.getElementById('modalStatusSelect').value;
+            const waitSelect = document.getElementById('modalWaitTimeSelect');
+            if (status === 'green') waitSelect.value = 'أقل من 10 دقائق';
+            if (status === 'yellow') waitSelect.value = '15 - 30 دقيقة';
+            if (status === 'red') waitSelect.value = 'ساعة فأكثر';
+        }
+
+        function openReportModal(id) {
+            const st = stations.find(s => s.id === id);
+            const t = i18n[currentLang];
+            document.getElementById('modalStationId').value = st.id;
+            document.getElementById('modalStationTitle').innerText = t.modalUpdateTitle + (currentLang === 'ar' ? st.name_ar : st.name_en);
+            document.getElementById('modalStatusSelect').value = st.status;
+            document.getElementById('modalWaitTimeSelect').value = st.waitTime;
+            document.getElementById('modalGas95').checked = st.gas95;
+            document.getElementById('modalDiesel').checked = st.diesel;
+            document.getElementById('reportModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('reportModal').style.display = 'none';
+        }
+
+        function submitQuickReport(e) {
+            e.preventDefault();
+            const id = parseInt(document.getElementById('modalStationId').value);
+            const st = stations.find(s => s.id === id);
+            const t = i18n[currentLang];
+
+            st.status = document.getElementById('modalStatusSelect').value;
+            st.waitTime = document.getElementById('modalWaitTimeSelect').value;
+            st.gas95 = document.getElementById('modalGas95').checked;
+            st.diesel = document.getElementById('modalDiesel').checked;
+            st.reputation = parseInt(document.getElementById('modalReputationSelect').value);
+            st.updated_ar = 'الآن (مباشر)';
+            st.updated_en = 'Just now (live)';
+
+            const stream = document.getElementById('activityStream');
+            const li = document.createElement('li');
+            li.className = 'stream-item';
+            const name = currentLang === 'ar' ? st.name_ar : st.name_en;
+            li.innerHTML = `
+                <span>${currentLang === 'ar' ? 'تحديث جديد:' : 'New update:'} <strong>${name}</strong> - ${t.thWait}: ${getWaitTimeLabel(st.waitTime)}</span>
+                <span class="reputation-badge">🛡️ (${st.reputation}%)</span>
+            `;
+            stream.insertBefore(li, stream.firstChild);
+
+            closeModal();
+            renderStations();
+        }
+
+        function initCharts() {
+            const t = i18n[currentLang];
+
+            // 1. Status Chart
+            const ctx1 = document.getElementById('statusChart').getContext('2d');
+            statusChartInstance = new Chart(ctx1, {
+                type: 'doughnut',
+                data: {
+                    labels: [t.statusGreen, t.statusYellow, t.statusRed],
+                    datasets: [{
+                        data: [0, 0, 0],
+                        backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+                        borderWidth: 0,
+                        hoverOffset: 6,
+                        borderRadius: 8,
+                        spacing: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '76%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { usePointStyle: true, pointStyle: 'circle', padding: 14 }
+                        }
+                    }
+                }
+            });
+
+            // 2. District Chart
+            const ctx2 = document.getElementById('districtChart').getContext('2d');
+            const barGradient = ctx2.createLinearGradient(0, 0, 0, 220);
+            barGradient.addColorStop(0, '#1e3a8a');
+            barGradient.addColorStop(1, '#3b82f6');
+
+            districtChartInstance = new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: t.districts,
+                    datasets: [{
+                        label: t.chartDistrictDataset,
+                        data: [42, 28, 55, 20, 31, 8],
+                        backgroundColor: barGradient,
+                        borderRadius: 8,
+                        borderSkipped: false,
+                        maxBarThickness: 28
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: {
+                            grid: { color: 'rgba(226, 232, 240, 0.6)', borderDash: [4, 4] },
+                            ticks: { precision: 0 }
+                        }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // 3. Monthly Forecast Chart
+            const ctx3 = document.getElementById('monthlyForecastChart').getContext('2d');
+            const lineGradient = ctx3.createLinearGradient(0, 0, 0, 240);
+            lineGradient.addColorStop(0, 'rgba(15, 44, 89, 0.28)');
+            lineGradient.addColorStop(1, 'rgba(15, 44, 89, 0.00)');
+
+            const daysLabels = [];
+            for (let i = 1; i <= 30; i += 3) {
+                daysLabels.push((currentLang === 'ar' ? 'يوم ' : 'Day ') + i);
+            }
+
+            monthlyChartInstance = new Chart(ctx3, {
+                type: 'line',
+                data: {
+                    labels: daysLabels,
+                    datasets: [
+                        {
+                            label: t.chartForecastLegend,
+                            data: [35, 40, 52, 78, 65, 45, 38, 50, 42, 35],
+                            borderColor: '#0f2c59',
+                            backgroundColor: lineGradient,
+                            fill: true,
+                            tension: 0.4,
+                            borderWidth: 3,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#ffffff',
+                            pointBorderColor: '#0f2c59',
+                            pointBorderWidth: 2
+                        },
+                        {
+                            label: t.chartThresholdLegend,
+                            data: [75, 75, 75, 75, 75, 75, 75, 75, 75, 75],
+                            borderColor: 'rgba(239, 68, 68, 0.85)',
+                            borderDash: [6, 6],
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { intersect: false, mode: 'index' },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: {
+                            min: 0, max: 100,
+                            grid: { color: 'rgba(226, 232, 240, 0.6)', borderDash: [4, 4] },
+                            ticks: { callback: v => v + '%' }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { usePointStyle: true, pointStyle: 'circle', padding: 14 }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateChartLocale() {
+            const t = i18n[currentLang];
+
+            // 1. Status Chart
+            statusChartInstance.data.labels = [t.statusGreen, t.statusYellow, t.statusRed];
+            statusChartInstance.update();
+
+            // 2. District Chart
+            districtChartInstance.data.labels = t.districts;
+            districtChartInstance.data.datasets[0].label = t.chartDistrictDataset;
+            districtChartInstance.update();
+
+            // 3. Monthly Chart
+            const daysLabels = [];
+            for (let i = 1; i <= 30; i += 3) {
+                daysLabels.push((currentLang === 'ar' ? 'يوم ' : 'Day ') + i);
+            }
+            monthlyChartInstance.data.labels = daysLabels;
+            monthlyChartInstance.data.datasets[0].label = t.chartForecastLegend;
+            monthlyChartInstance.data.datasets[1].label = t.chartThresholdLegend;
+            monthlyChartInstance.update();
+        }
+
+        function recalculateMonthlyForecast() {
+            const supply = document.getElementById('simSupply').value;
+            const power = document.getElementById('simPower').value;
+            const salary = document.getElementById('simSalary').value;
+            const t = i18n[currentLang];
+
+            let base = [35, 38, 45, 50, 42, 38, 40, 45, 38, 32];
+
+            if (supply === 'delay') {
+                base = base.map((v, idx) => (idx >= 3 && idx <= 6) ? v + 35 : v);
+            } else if (supply === 'boost') {
+                base = base.map(v => Math.max(20, v - 15));
+            }
+
+            if (power === 'high') {
+                base = base.map(v => v + 18);
+            }
+
+            if (salary === 'payday') {
+                base = base.map((v, idx) => (idx >= 1 && idx <= 4) ? v + 24 : v);
+            } else if (salary === 'holiday') {
+                base = base.map((v, idx) => (idx >= 6 && idx <= 8) ? v + 30 : v);
+            }
+
+            base = base.map(v => Math.min(100, v));
+
+            monthlyChartInstance.data.datasets[0].data = base;
+            monthlyChartInstance.update();
+
+            const maxVal = Math.max(...base);
+            const riskLabel = document.getElementById('dashRiskIndex');
+            if (maxVal > 75) {
+                riskLabel.innerText = `${t.riskVeryHigh} (${maxVal}%)`;
+                riskLabel.style.color = '#ef4444';
+            } else if (maxVal > 50) {
+                riskLabel.innerText = `${t.riskModerate} (${maxVal}%)`;
+                riskLabel.style.color = '#d97706';
+            } else {
+                riskLabel.innerText = `${t.riskStable} (${maxVal}%)`;
+                riskLabel.style.color = '#10b981';
+            }
+        }
+
+        function updateDashboardCharts() {
+            const greenCount = stations.filter(s => s.status === 'green').length;
+            const yellowCount = stations.filter(s => s.status === 'yellow').length;
+            const redCount = stations.filter(s => s.status === 'red').length;
+
+            document.getElementById('dashTotal').innerText = stations.length;
+            document.getElementById('dashEfficiency').innerText = Math.round(((greenCount + yellowCount) / stations.length) * 100) + '%';
+
+            if (statusChartInstance) {
+                statusChartInstance.data.datasets[0].data = [greenCount, yellowCount, redCount];
+                statusChartInstance.update();
+            }
+        }
+
+        function populateComplaintDropdown() {
+            const select = document.getElementById('complaintStation');
+            select.innerHTML = `<option value="">-- ${currentLang === 'ar' ? 'اختر المحطة المعنية' : 'Select Target Station'} --</option>`;
+            stations.forEach(s => {
+                const name = currentLang === 'ar' ? s.name_ar : s.name_en;
+                const company = currentLang === 'ar' ? s.company_ar : s.company_en;
+                select.innerHTML += `<option>${name} (${company})</option>`;
+            });
+        }
+
+        function submitComplaint(e) {
+            e.preventDefault();
+            alert(i18n[currentLang].complaintSent);
+            e.target.reset();
+        }
+
+        async function exportExecutivePDF() {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            if (isMobile) {
+                window.print();
+                return;
+            }
+
+            const element = document.getElementById('pdfPrintArea');
+            const statusCanvas = document.getElementById('statusChart');
+            const districtCanvas = document.getElementById('districtChart');
+            const monthlyCanvas = document.getElementById('monthlyForecastChart');
+
+            const statusImg = document.getElementById('statusChartImg');
+            const districtImg = document.getElementById('districtChartImg');
+            const monthlyImg = document.getElementById('monthlyForecastChartImg');
+
+            statusImg.src = statusChartInstance.toBase64Image();
+            districtImg.src = districtChartInstance.toBase64Image();
+            monthlyImg.src = monthlyChartInstance.toBase64Image();
+
+            statusCanvas.style.display = 'none';
+            districtCanvas.style.display = 'none';
+            monthlyCanvas.style.display = 'none';
+
+            statusImg.style.display = 'block';
+            districtImg.style.display = 'block';
+            monthlyImg.style.display = 'block';
+
+            element.classList.add('pdf-export-mode');
+
+            const opt = {
+                margin: [8, 8, 8, 8],
+                filename: currentLang === 'ar' ? 'تقرير_التنبؤ_الشهري_محطات_طرابلس.pdf' : 'Tripoli_Monthly_Fuel_Forecast_Report.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, logging: false },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            try {
+                await html2pdf().set(opt).from(element).save();
+            } catch (err) {
+                window.print();
+            } finally {
+                element.classList.remove('pdf-export-mode');
+                statusCanvas.style.display = 'block';
+                districtCanvas.style.display = 'block';
+                monthlyCanvas.style.display = 'block';
+
+                statusImg.style.display = 'none';
+                districtImg.style.display = 'none';
+                monthlyImg.style.display = 'none';
+            }
+        }
+
+        window.onload = function() {
+            initMap();
+            initCharts();
+            applyTranslations();
+            renderStations();
+            populateComplaintDropdown();
+            renderAlertsTable();
+        };
+    </script>
+</body>
+</html>
