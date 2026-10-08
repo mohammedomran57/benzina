@@ -6,3 +6,41 @@
 .station[data-citizen-state=closed]{--state:#64748b;--tint:#e9edf3}
 .station .workflow-evidence{background:var(--tint);border:1px solid var(--state);text-align:start;padding:16px}
 .citizen-eyebrow{font-size:12px;color:#536783}.citizen-title{display:block;font-size:22px;line-height:1.6}.citizen-source{display:inline-block;font-size:12px;padding:4px 8px;background:white;border-radius:6px;margin:8px 0}.citizen-score{display:flex;align-items:center;gap:10px}.citizen-score b{font-size:30px}.citizen-score span{font-size:12px}.workflow-evidence meter{display:block;width:100%;height:18px;accent-color:var(--state)}.workflow-evidence small{font-size:11px;line-height:1.8;margin-top:8px}.station .fuels{display:flex;flex-wrap:wrap;gap:8px}.citizen-fuel-heading{width:100%;font-size:16px;font-weight:800;margin:4px 0}.station .fuels span{padding:10px;font-size:14px;border-radius:8px;flex:1;white-space:nowrap}.citizen-fuel-source{width:100%;font-size:11px;line-height:1.8;color:#62758e}
+/* Citizen cards: clear hierarchy, restrained state colour and comfortable touch targets. */
+#cards{gap:22px;align-items:stretch}
+#cards .station[data-citizen-state]{position:relative;isolation:isolate;padding:24px;border:1px solid #dce5f1;border-top:1px solid #dce5f1;border-radius:22px;background:#fff;box-shadow:0 6px 24px #203b6510;overflow:hidden;transition:transform .18s,box-shadow .18s}
+#cards .station[data-citizen-state]::before{content:'';position:absolute;inset:0 0 auto;height:5px;background:var(--state)}
+#cards .station:hover{transform:translateY(-3px);box-shadow:0 12px 30px #203b651a}
+#cards .station-top{min-height:38px}
+#cards .pill{padding:8px 12px;border-radius:24px;font-size:12px;background:#e6f7ee;color:#176449}
+#cards .pill.closed{background:#edf0f5;color:#556278}
+#cards .favorite{display:grid;place-items:center;width:38px;height:38px;padding:0;border:1px solid #e6ebf3;border-radius:12px;background:#fafbfd;font-size:23px;color:#a07b29}
+#cards .favorite[aria-pressed=true]{background:#fff4d5;border-color:#eedba7}
+#cards .station h3{font-size:22px;line-height:1.5;margin:18px 0 5px;letter-spacing:-.3px;color:#19365c}
+#cards .station .area{font-size:12px;line-height:1.7;color:#65768e}
+#cards .workflow-evidence{position:relative;margin:20px 0;padding:18px;border:0;border-radius:16px;background:var(--tint);box-shadow:inset 0 0 0 1px #203b6508}
+#cards .citizen-eyebrow{display:block;font-size:11px;font-weight:500;color:#586a81;line-height:1.7;margin-bottom:7px}
+#cards .citizen-title{display:flex;align-items:center;gap:9px;font-size:21px;line-height:1.5;color:#203b60}
+#cards .citizen-title::before{content:'';width:9px;height:9px;border-radius:50%;background:var(--state);flex:none;box-shadow:0 0 0 4px #ffffffb3}
+#cards .workflow-evidence p{font-size:13px;line-height:1.8;margin:10px 0 0;color:#63758d}
+#cards .citizen-source{font-size:11px;line-height:1.6;background:#ffffffb8;border-radius:7px;padding:5px 8px}
+#cards .citizen-score{margin-top:12px;gap:12px}
+#cards .citizen-score b{font-size:28px;white-space:nowrap;font-variant-numeric:tabular-nums}
+#cards .citizen-score span{font-size:12px;color:#506580;line-height:1.6}
+#cards .workflow-evidence small{color:#596d86;line-height:1.8}
+#cards .citizen-fuel-heading{font-size:14px;line-height:1.7;color:#243f64;margin:0 0 4px}
+#cards .fuels{gap:10px}
+#cards .fuels span{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:13px 14px;background:#eaf8f1;border:1px solid #d6eee2;color:#216e53;font-size:12px;min-width:0;white-space:normal;border-radius:12px;line-height:1.5}
+#cards .fuels span b{font-size:15px;font-weight:800}
+#cards .fuels span.unavailable{background:#fff1f1;border-color:#f3dfe1;color:#a94d59}
+#cards .citizen-fuel-source{font-size:11px;line-height:1.8;color:#697991;margin-top:2px}
+#cards .updated{font-size:11px;line-height:1.8;padding:10px 12px;background:#f7f9fc;border-radius:9px;margin:16px 0;color:#62728b;overflow-wrap:anywhere}
+#cards .updated.stale{background:#fff8eb;color:#88641f}
+#cards .actions{gap:10px;border-top:1px solid #edf0f6;padding-top:16px;margin-top:auto}
+#cards .actions>*{min-height:44px;display:flex;align-items:center;justify-content:center;font-size:12px;line-height:1.5;border-radius:11px;padding:10px 8px}
+#cards .actions button{color:#fff;background:#315ab5;border-color:#315ab5;box-shadow:0 3px 8px #315ab51a}
+#cards .actions button:hover{background:#244a9a}
+#cards .actions a{background:#fff;border-color:#dbe3ef;color:#375477}
+#cards .actions a:hover{background:#f2f6fc}
+@media(max-width:540px){#cards{gap:16px}#cards .station[data-citizen-state]{padding:20px;border-radius:19px}#cards .station h3{font-size:21px}#cards .actions>*{min-height:46px}}
+@media(prefers-reduced-motion:reduce){#cards .station:hover{transform:none}}
