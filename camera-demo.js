@@ -59,7 +59,7 @@
     secure:['الكاميرا المباشرة تحتاج HTTPS على الهاتف أو localhost على نفس الجهاز. استخدم فيديو مسجلاً الآن أو افتح رابط HTTPS موثوقاً؛ لا تتجاوز تحذيرات المتصفح.','Live camera needs HTTPS on a phone or localhost on this device. Use a recorded video now or a trusted HTTPS address; do not bypass browser warnings.'],
     permission:['لم يُسمح باستخدام الكاميرا. اسمح بها من المتصفح أو اختر فيديو مسجلاً.','Camera permission was not granted. Allow it in your browser or choose a recorded video.'],
     cameraError:['تعذر فتح الكاميرا؛ قد تكون مشغولة أو غير متاحة. جرّب فيديو مسجلاً.','Camera unavailable or in use. Try a recorded video.'],
-    modelError:['تعذر تشغيل نموذج الذكاء الاصطناعي المحلي. تأكد من وجود مجلد vendor كاملاً ثم أعد المحاولة. تفاصيل:','The local AI model could not start. Check that the complete vendor folder is present and retry. Details:'],
+    modelError:['تعذر تحميل أحد مكونات الكشف. راجع مسار الملف الموضح أدناه وتأكد من نشره، ثم أعد المحاولة. تفاصيل:','A detector component could not load. Check the file path below is published, then retry. Details:'],
     videoError:['تعذر قراءة الفيديو. جرّب مقطع MP4 بترميز H.264 قصيراً.','Could not read this video. Try a short H.264 MP4 clip.'],
     settings:['راجع القيم: الحد المرتفع أكبر من المتوسط، والمنطقة مستطيل لا يقل عن ٥٪ عرضاً وارتفاعاً.','Check settings: high must exceed moderate, and the rectangle must be at least 5% wide and high.'],
     confirm:['أكد أولاً أن الهاتف ثابت وأن المنطقة تمثل الطابور.','First confirm that the phone is fixed and the area is a queue.'],
@@ -164,7 +164,7 @@
   const scriptLoads=new Map();
   function loadScript(url,globalName){
     if(window[globalName])return Promise.resolve();if(scriptLoads.has(url))return scriptLoads.get(url);
-    const promise=new Promise((resolve,reject)=>{const script=document.createElement('script');const timeout=setTimeout(()=>{script.remove();reject(Error('timeout'));},45000);script.src=url;script.onload=()=>{clearTimeout(timeout);window[globalName]?resolve():reject(Error('library'));};script.onerror=()=>{clearTimeout(timeout);script.remove();reject(Error('network'));};document.head.append(script);}).catch(e=>{scriptLoads.delete(url);throw e;});scriptLoads.set(url,promise);return promise;
+    const promise=new Promise((resolve,reject)=>{const script=document.createElement('script');const timeout=setTimeout(()=>{script.remove();reject(Error('Timed out loading: '+url));},45000);script.src=url;script.onload=()=>{clearTimeout(timeout);window[globalName]?resolve():reject(Error('Invalid library file: '+url));};script.onerror=()=>{clearTimeout(timeout);script.remove();reject(Error('Failed to load: '+url+' — check this file exists in the published site, then retry.'));};document.head.append(script);}).catch(e=>{scriptLoads.delete(url);throw e;});scriptLoads.set(url,promise);return promise;
   }
   async function getModel(){
     if(model)return model;if(modelPromise)return modelPromise;modelState='loading';
